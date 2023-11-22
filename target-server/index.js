@@ -1,6 +1,7 @@
 const express = require('express');
 const session = require('express-session');
 const handlebars = require('express-handlebars');
+const { v4: uuid } = require('uuid');
 const fs = require('fs');
 
 const app = express();
@@ -30,6 +31,26 @@ const login = (req, res, next) => {
   }
 }
 
+// CSRF
+
+const tokens = new Map();
+
+const csrfToken = (sessionId) => {
+  const token = uuid();
+  tokens.get(sessionId).add(token);
+  setTimeout(() => tokens.get(sessionId).delete(token), 30000)
+  return token;
+}
+
+const csrf = (req, res, next) => {
+  const token = req.body.csrf;
+  if (!token || !tokens.get(req.sessionID).has(token)) {
+    res.status(422).send('CSRF Token missing or expired');
+  } else {
+    next();
+  }
+}
+
 // DB
 const users = JSON.parse(fs.readFileSync('db.json'));
 
@@ -52,6 +73,7 @@ app.post('/login', (req, res) => {
     return res.status(400).send('Invalid Credentials');
   }
   req.session.userId = user.id;
+  tokens.set(req.sessionID, new Set());
   res.redirect('/home');
 });
 
@@ -61,10 +83,10 @@ app.get('/logout', login, (req, res) => {
 });
 
 app.get('/edit', login, (req, res) => {
-  res.render('edit');
+  res.render('edit', { token: csrfToken(req.sessionID) });
 });
 
-app.post('/edit', login, (req, res) => {
+app.post('/edit', login, csrf, (req, res) => {
   const user = users.find(user => user.id === req.session.userId);
   user.email = req.body.email;
   console.log(`User ${user.id} email changed to ${user.email}`);
